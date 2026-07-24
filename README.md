@@ -111,3 +111,7 @@ After deploy, the site is available at the project's Pages URL (and any custom d
 ## Data source
 
 [Shanghai Gold Exchange — daily quotes](https://www.sge.com.cn/sjzx/mrhqsj). Bank "accumulated gold" products track SGE Au99.99 closely, so it serves as the domestic price benchmark.
+
+## License
+
+[MIT](LICENSE) © OrekiYuta
