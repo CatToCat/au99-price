@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img"
+     aria-label="Au99.99 Gold Price">
+    <defs>
+        <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#f5d67a"/>
+            <stop offset="50%" stop-color="#e0b64a"/>
+            <stop offset="100%" stop-color="#b8860b"/>
+        </linearGradient>
+    </defs>
+    <rect width="64" height="64" rx="14" fill="#14110c"/>
+    <!-- top accent bar -->
+    <rect x="0" y="0" width="64" height="4" rx="2" fill="url(#gold)"/>
+    <!-- Au element symbol -->
+    <text x="32" y="38" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-weight="700"
+          fill="url(#gold)" text-anchor="middle" letter-spacing="-1">Au</text>
+    <!-- 99.99 sub -->
+    <text x="32" y="52" font-family="-apple-system, 'Segoe UI', sans-serif" font-size="10" font-weight="600"
+          fill="#9a7b2e" text-anchor="middle" letter-spacing="0.5">99.99</text>
+</svg>

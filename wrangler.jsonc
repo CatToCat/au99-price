@@ -1,0 +1,7 @@
+{
+  // Cloudflare Pages project config.
+  // Deploy: wrangler pages deploy pages --project-name gold-price-card
+  "name": "gold-price-card",
+  "pages_build_output_dir": "pages",
+  "compatibility_date": "2026-07-01"
+}

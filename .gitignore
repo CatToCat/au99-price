@@ -1,0 +1,12 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Cloudflare / wrangler
+.wrangler/
+node_modules/
+
+# Local dev artifacts
+__pycache__/
+*.log

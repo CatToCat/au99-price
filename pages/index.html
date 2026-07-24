@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14110c" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<title>Gold Price · Au99.99</title>
+<style>
+  :root{--up:#e35d4f;--down:#2fae66;--gold:#d4a629;--bg:#f5f3ee;--card:#fff;--sub:#9a938a;--txt:#2b2620}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  html,body{overflow-x:hidden}
+  body{background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    display:flex;flex-direction:column;align-items:center;
+    padding:24px 16px calc(24px + env(safe-area-inset-bottom));gap:16px;
+    -webkit-tap-highlight-color:transparent}
+  .wrap{width:100%;max-width:640px;min-width:0;display:flex;flex-direction:column;gap:16px}
+  .main-price-item{background:var(--card);border-radius:22px;padding:26px 30px;
+    box-shadow:0 12px 40px rgba(120,100,40,.10);width:100%;
+    position:relative;overflow:hidden}
+  .main-price-item::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;
+    background:linear-gradient(90deg,#e6c15a,#d4a629,#b8860b)}
+  .name{font-size:15px;color:var(--sub);letter-spacing:.5px;display:flex;
+    align-items:center;gap:8px}
+  .name .tag{font-size:11px;background:#faf3dd;color:#b8860b;padding:2px 8px;border-radius:6px}
+  /* Top area: price on the left, data grid on the right */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:24px;
+    margin-top:14px}
+  .left{flex:0 1 auto;min-width:0}
+  .price-row{display:flex;align-items:baseline;gap:10px}
+  .price{font-size:clamp(34px,10vw,50px);font-weight:800;line-height:1;
+    font-variant-numeric:tabular-nums;letter-spacing:-1px;white-space:nowrap}
+  .unit{font-size:15px;color:var(--sub)}
+  .chg{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:8px;
+    white-space:nowrap}
+  .arrow{font-size:13px}
+  /* Right-side 2x2 compact data grid */
+  .grid{flex:1 1 auto;min-width:0;max-width:240px;display:grid;grid-template-columns:1fr 1fr;
+    gap:8px 18px;padding-left:24px;border-left:1px solid #eee}
+  .grid .cell{display:flex;justify-content:space-between;gap:6px;font-size:13px;min-width:0}
+  .grid .cell b{white-space:nowrap}
+  .grid .cell span{color:var(--sub)}
+  .grid .cell b{font-weight:600;font-variant-numeric:tabular-nums}
+  .foot{margin-top:20px;padding-top:14px;border-top:1px solid #eee;
+    font-size:11px;color:var(--sub);display:flex;
+    justify-content:flex-end;align-items:center}
+  .foot a{color:var(--sub);text-decoration:none;border-bottom:1px dotted var(--sub)}
+  .foot a:hover{color:var(--gold);border-bottom-color:var(--gold)}
+  .live{display:inline-flex;align-items:center;gap:5px}
+  .updated{margin-top:12px;padding-top:12px;border-top:1px solid #eee;
+    font-size:11px;color:var(--sub);
+    display:flex;justify-content:space-between;align-items:center}
+  .updated a{color:var(--sub);text-decoration:none;border-bottom:1px dotted var(--sub)}
+  .updated a:hover{color:var(--gold);border-bottom-color:var(--gold)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--down);
+    animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .up{color:var(--up)}.down{color:var(--down)}
+  .chart-card{background:var(--card);border-radius:22px;padding:20px 18px 14px;
+    box-shadow:0 12px 40px rgba(120,100,40,.10);width:100%;
+    overflow:hidden}
+  #chart{width:100%;max-width:100%;height:300px}
+  .ranges{display:flex;gap:6px;padding:2px 4px 12px;flex-wrap:wrap}
+  .rg{font-size:12px;padding:5px 12px;border-radius:14px;cursor:pointer;
+    border:1px solid #e7e0d3;color:var(--sub);user-select:none}
+  .rg.on{background:var(--gold);color:#fff;border-color:var(--gold);font-weight:600}
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#14110c;--card:#1f1b14;--sub:#8a8175;--txt:#f0e9dc}
+    .grid{border-left-color:#2c2620;border-top-color:#2c2620}
+    .foot{border-top-color:#2c2620}
+    .updated{border-top-color:#2c2620}
+    .name .tag{background:#2c2410;color:#e6c15a}
+    .rg{border-color:#3a332a}
+  }
+  /* ---- Mobile ---- */
+  @media (max-width:480px){
+    body{padding:14px 12px calc(14px + env(safe-area-inset-bottom))}
+    .wrap{gap:12px}
+    .main-price-item{padding:20px 16px;border-radius:18px}
+    .chart-card{padding:16px 12px 10px;border-radius:18px}
+    /* Keep left-right layout on narrow screens: price left, grid right */
+    .top{gap:10px;margin-top:12px}
+    .price{font-size:clamp(28px,8vw,40px)}
+    .chg{font-size:13px;margin-top:6px}
+    .grid{max-width:none;padding-left:10px;gap:6px 8px;font-size:12px}
+    .grid .cell{font-size:12px;gap:4px}
+    /* Range buttons: wrap to show all, distribute evenly, no horizontal scroll */
+    .ranges{flex-wrap:wrap;gap:6px 5px;padding:2px 0 12px;justify-content:space-between}
+    .rg{flex:1 1 auto;text-align:center;padding:6px 8px;font-size:12px;
+      border-radius:12px;white-space:nowrap}
+    #chart{height:260px}
+  }
+  /* ---- Extra-narrow fallback ---- */
+  @media (max-width:360px){
+    .main-price-item{padding:16px 12px}
+    .top{gap:8px}
+    .price{font-size:26px}
+    .chg{font-size:12px}
+    .grid{padding-left:8px;gap:5px 6px;font-size:11px}
+    .grid .cell{font-size:11px}
+    .rg{padding:6px 6px;font-size:11px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="main-price-item">
+  <div class="name"><span id="name">Shanghai Gold Exchange · Au99.99</span><span class="tag">CNY/g</span></div>
+  <div class="top">
+    <div class="left">
+      <div class="price-row">
+        <span class="price" id="price">--</span>
+      </div>
+      <div class="chg" id="chg">&nbsp;</div>
+    </div>
+    <div class="grid">
+      <div class="cell"><span>Open</span><b id="open">--</b></div>
+      <div class="cell"><span>Prev</span><b id="preClose">--</b></div>
+      <div class="cell"><span>High</span><b id="high">--</b></div>
+      <div class="cell"><span>Low</span><b id="low">--</b></div>
+    </div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div class="ranges" id="ranges">
+    <span class="rg on" data-d="today">Today</span>
+    <span class="rg" data-d="7">7D</span>
+    <span class="rg" data-d="30">1M</span>
+    <span class="rg" data-d="90">3M</span>
+    <span class="rg" data-d="180">6M</span>
+    <span class="rg" data-d="365">1Y</span>
+    <span class="rg" data-d="0">All</span>
+  </div>
+  <div id="chart"></div>
+  <div class="updated">
+    <span class="live"><span class="dot"></span><span id="time">Loading…</span></span>
+    <a href="https://www.sge.com.cn/sjzx/mrhqsj" target="_blank" rel="noopener">Source · Shanghai Gold Exchange</a>
+  </div>
+</div>
+</div>
+
+<script src="./echarts.min.js"></script>
+<script>
+  const $=id=>document.getElementById(id);
+  const f=n=>(n==null?'--':Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}));
+  async function load(){
+    try{
+      const d=await (await fetch('/api/price',{cache:'no-store'})).json();
+      if(d.error)throw new Error(d.error);
+      $('name').textContent=d.name||'Shanghai Gold Exchange · Au99.99';
+      $('price').textContent=f(d.price);
+      $('open').textContent=f(d.open);
+      $('preClose').textContent=f(d.preClose);
+      $('high').textContent=f(d.high);
+      $('low').textContent=f(d.low);
+      const up=(d.raise||0)>=0;
+      const cls=up?'up':'down';
+      $('price').className='price '+cls;
+      const pct=(d.raisePercent*100);
+      $('chg').className='chg '+cls;
+      $('chg').innerHTML='<span class="arrow">'+(up?'▲':'▼')+'</span> '+
+        (up?'+':'')+f(d.raise)+'  ('+(up?'+':'')+pct.toFixed(2)+'%)';
+      $('time').textContent=d.time||'';
+    }catch(e){ $('time').textContent='Failed to load: '+e.message; }
+  }
+
+  // ---- Chart ----
+  const dark=matchMedia('(prefers-color-scheme:dark)').matches;
+  const chartEl=$('chart');
+  const chart=echarts.init(chartEl, dark?'dark':null,{renderer:'canvas'});
+  // window resize + ResizeObserver double safeguard for width auto-fit
+  addEventListener('resize',()=>chart.resize());
+  if(window.ResizeObserver){
+    new ResizeObserver(()=>chart.resize()).observe(chartEl);
+  }
+  let allPoints=[];    // daily K-line [{date,close}]
+  let intraPoints=[];  // intraday [{time,price}]
+  let curRange='today';
+
+  const isMobile=()=>matchMedia('(max-width:480px)').matches;
+  function baseAxis(x, isTime){
+    const mob=isMobile();
+    return {
+      backgroundColor:'transparent',
+      grid:{left:mob?46:52,right:14,top:14,bottom:mob?28:44},
+      tooltip:{trigger:'axis',confine:true,valueFormatter:v=>f(v)+' CNY/g'},
+      xAxis:{type:'category',data:x,boundaryGap:false,
+        axisLine:{lineStyle:{color:dark?'#3a332a':'#e0d8c8'}},
+        axisTick:{show:false},
+        axisLabel:{color:dark?'#8a8175':'#9a938a',
+          hideOverlap:true,
+          interval:(idx,val)=>{
+            // Keep about 5-6 labels, avoid crowding
+            const step=Math.max(1,Math.ceil(x.length/(mob?5:8)));
+            return idx%step===0;
+          },
+          formatter:v=>isTime?v:v.slice(5)}},
+      yAxis:{scale:true,axisLine:{show:false},
+        splitLine:{lineStyle:{color:dark?'#26211a':'#efe9dc'}},
+        axisLabel:{color:dark?'#8a8175':'#9a938a',
+          fontSize:mob?10:12}}
+    };
+  }
+  function lineSeries(y){
+    return [{type:'line',data:y,smooth:true,showSymbol:false,
+      lineStyle:{color:'#d4a629',width:2},
+      areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[
+        {offset:0,color:'rgba(212,166,41,.30)'},
+        {offset:1,color:'rgba(212,166,41,0)'}]}}}];
+  }
+
+  function draw(){
+    if(curRange==='today'){
+      const x=intraPoints.map(p=>p.time), y=intraPoints.map(p=>p.price);
+      const opt=baseAxis(x,true); opt.series=lineSeries(y);
+      chart.setOption(opt,true);
+    }else{
+      const days=+curRange;
+      const pts = days>0 ? allPoints.slice(-days) : allPoints;
+      const x=pts.map(p=>p.date), y=pts.map(p=>p.close);
+      const opt=baseAxis(x,false); opt.series=lineSeries(y);
+      chart.setOption(opt,true);
+    }
+  }
+
+  async function loadDaily(){
+    try{
+      const d=await (await fetch('/api/daily')).json();
+      if(d.error)throw new Error(d.error);
+      allPoints=d.points||[];
+      if(curRange!=='today')draw();
+    }catch(e){ if(curRange!=='today')chartErr(e.message); }
+  }
+  async function loadIntraday(){
+    try{
+      const d=await (await fetch('/api/intraday',{cache:'no-store'})).json();
+      if(d.error)throw new Error(d.error);
+      intraPoints=d.points||[];
+      if(curRange==='today')draw();
+    }catch(e){ if(curRange==='today')chartErr(e.message); }
+  }
+  function chartErr(m){
+    chart.setOption({title:{text:'Failed to load data: '+m,
+      left:'center',top:'center',textStyle:{fontSize:12,color:'#9a938a'}}});
+  }
+
+  document.querySelectorAll('#ranges .rg').forEach(el=>el.onclick=()=>{
+    document.querySelectorAll('#ranges .rg').forEach(x=>x.classList.remove('on'));
+    el.classList.add('on'); curRange=el.dataset.d; draw();
+  });
+
+  load(); loadIntraday(); loadDaily();
+  setInterval(load,60000);          // refresh live price every 60s (SGE has ~15min delay, no need faster)
+  setInterval(loadIntraday,60000);  // refresh today's intraday every 60s
+</script>
+</body>
+</html>
