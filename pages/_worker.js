@@ -25,7 +25,9 @@ export default {
       }
     }
 
-    // Intraday quote (today's chart) — full trading cycle, original order (night session 20:00 -> day session 15:30)
+    // Intraday quote (today's chart) — full trading cycle, original order (night session 20:00 -> day session 15:30).
+    // Keep every time tick so the x-axis spans the whole session; points with no value yet
+    // get price=null so the chart leaves them blank (no line drawn for not-yet-reached times).
     if (url.pathname === "/api/intraday") {
       try {
         const q = await fetch(SGE_QUOT, {
@@ -37,7 +39,8 @@ export default {
         const out = [];
         for (let i = 0; i < times.length; i++) {
           const v = data[i];
-          if (v !== "" && v != null) out.push({ time: times[i], price: Number(v) });
+          const hasValue = v !== "" && v != null;
+          out.push({ time: times[i], price: hasValue ? Number(v) : null });
         }
         return json({ instid: q.heyue || "Au99.99", delaystr: q.delaystr || "", points: out });
       } catch (e) {
@@ -55,7 +58,7 @@ export default {
         ]);
 
         const data = (q.data || []).filter((v) => v !== "" && v != null).map(Number);
-        const price = data.length ? data[data.length - 1] : null;
+        let price = data.length ? data[data.length - 1] : null;
 
         // Daily K-line format: [date, open, close, low, high]. Last row = today, second-to-last = yesterday.
         const rows = (daily && daily.time) || [];
@@ -68,12 +71,25 @@ export default {
         if (rows.length >= 2) preClose = rows[rows.length - 2][2];
         else if (todayRow) preClose = todayRow[1];
 
-        const raise = price != null && preClose != null ? +(price - preClose).toFixed(2) : null;
-        const raisePercent = raise != null && preClose ? raise / preClose : null;
-
+        // Sanity check: SGE quotations sometimes returns a future/stale timestamp
+        // (e.g. on weekends). The daily K-line last row is the real last trading day.
+        // If the quote date is later than the last trading day, treat it as stale.
+        const lastTradeDate = todayRow ? todayRow[0] : null; // "YYYY-MM-DD"
         // Convert SGE time string like "YYYY[nian]MM[yue]DD[ri] HH:mm:ss" -> "YYYY-MM-DD HH:mm:ss"
         // \u5e74=year \u6708=month \u65e5=day (CJK chars in SGE response)
-        const time = (q.delaystr || "").replace(/(\d+)\u5e74(\d+)\u6708(\d+)\u65e5/, "$1-$2-$3");
+        const rawTime = (q.delaystr || "").replace(/(\d+)\u5e74(\d+)\u6708(\d+)\u65e5/, "$1-$2-$3");
+        const quoteDate = (rawTime.match(/^\d{4}-\d{2}-\d{2}/) || [null])[0];
+        let time = rawTime;
+        let stale = false;
+        if (lastTradeDate && quoteDate && quoteDate > lastTradeDate) {
+          // Stale/closed: fall back to last trading day's close for both price and time.
+          stale = true;
+          time = lastTradeDate + " (closed)";
+          if (todayRow) price = todayRow[2]; // daily close
+        }
+
+        const raise = price != null && preClose != null ? +(price - preClose).toFixed(2) : null;
+        const raisePercent = raise != null && preClose ? raise / preClose : null;
 
         return json({
           name: q.heyue || "Au99.99",
@@ -85,6 +101,7 @@ export default {
           raise,
           raisePercent,
           time,
+          stale,
         });
       } catch (e) {
         return json({ error: String(e) }, 502);

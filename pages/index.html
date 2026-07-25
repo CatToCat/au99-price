@@ -57,6 +57,7 @@
   .updated a:hover{color:var(--gold);border-bottom-color:var(--gold)}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--down);
     animation:pulse 1.6s infinite}
+  .dot.closed{background:var(--sub);animation:none}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
   .up{color:var(--up)}.down{color:var(--down)}
   .chart-card{background:var(--card);border-radius:22px;padding:20px 18px 14px;
@@ -165,6 +166,8 @@
       $('chg').innerHTML='<span class="arrow">'+(up?'▲':'▼')+'</span> '+
         (up?'+':'')+f(d.raise)+'  ('+(up?'+':'')+pct.toFixed(2)+'%)';
       $('time').textContent=d.time||'';
+      // Toggle live/closed indicator based on stale flag from the API
+      document.querySelector('.dot').classList.toggle('closed', !!d.stale);
     }catch(e){ $('time').textContent='Failed to load: '+e.message; }
   }
 
@@ -206,7 +209,7 @@
     };
   }
   function lineSeries(y){
-    return [{type:'line',data:y,smooth:true,showSymbol:false,
+    return [{type:'line',data:y,smooth:true,showSymbol:false,connectNulls:false,
       lineStyle:{color:'#d4a629',width:2},
       areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[
         {offset:0,color:'rgba(212,166,41,.30)'},

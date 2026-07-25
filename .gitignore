@@ -2,6 +2,8 @@
 .DS_Store
 Thumbs.db
 *.swp
+.idea/
+.vscode/
 
 # Cloudflare / wrangler
 .wrangler/
