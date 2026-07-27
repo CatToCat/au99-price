@@ -60,32 +60,68 @@ export default {
         const data = (q.data || []).filter((v) => v !== "" && v != null).map(Number);
         let price = data.length ? data[data.length - 1] : null;
 
-        // Daily K-line format: [date, open, close, low, high]. Last row = today, second-to-last = yesterday.
+        // Daily K-line format: [date, open, close, low, high].
+        // The daily K-line only gains a row for "today" AFTER the session closes, so during
+        // a live session its last row is the *previous* completed trading day.
         const rows = (daily && daily.time) || [];
-        const todayRow = rows.length ? rows[rows.length - 1] : null;
-        const open = todayRow ? todayRow[1] : null;
-        const low = todayRow ? todayRow[3] : null;
-        const high = todayRow ? todayRow[4] : null;
-        // Previous close: yesterday's close
-        let preClose = null;
-        if (rows.length >= 2) preClose = rows[rows.length - 2][2];
-        else if (todayRow) preClose = todayRow[1];
+        const lastKRow = rows.length ? rows[rows.length - 1] : null;
+        const lastKDate = lastKRow ? lastKRow[0] : null; // "YYYY-MM-DD"
 
-        // Sanity check: SGE quotations sometimes returns a future/stale timestamp
-        // (e.g. on weekends). The daily K-line last row is the real last trading day.
-        // If the quote date is later than the last trading day, treat it as stale.
-        const lastTradeDate = todayRow ? todayRow[0] : null; // "YYYY-MM-DD"
+        // Determine the current Shanghai (UTC+8) date to compare against the K-line's last date.
+        const nowSh = new Date(Date.now() + 8 * 3600 * 1000);
+        const todaySh = nowSh.toISOString().slice(0, 10); // "YYYY-MM-DD" in UTC+8
+        // If the K-line already includes today's row, the session has closed for the day.
+        const kHasToday = lastKDate === todaySh;
+
+        let open, low, high, preClose;
+        if (kHasToday) {
+          // Session closed: today's row holds the final O/H/L/C; prev close = yesterday's row.
+          open = lastKRow[1];
+          low = lastKRow[3];
+          high = lastKRow[4];
+          preClose = rows.length >= 2 ? rows[rows.length - 2][2] : lastKRow[1];
+        } else {
+          // Live session (or pre-open): derive O/H/L from today's intraday ticks so far,
+          // and use the last completed trading day's close as the previous close.
+          open = data.length ? data[0] : null;
+          low = data.length ? Math.min(...data) : null;
+          high = data.length ? Math.max(...data) : null;
+          preClose = lastKRow ? lastKRow[2] : null; // last completed trading day's close
+        }
+
+        // Staleness detection.
+        // SGE's quotations feed keeps returning the *last session's* frozen data when the
+        // market is closed (weekends/holidays/after-hours), sometimes with a misleading
+        // timestamp. The reliable signal for "live" is whether the quote timestamp is
+        // recent relative to the real current time — NOT a comparison against the daily
+        // K-line date (the daily K-line only gains today's row after the session closes,
+        // so on a normal trading morning it legitimately lags behind the live quote and
+        // must not be treated as stale).
+        const lastTradeDate = lastKDate; // last completed trading day from the daily K-line
         // Convert SGE time string like "YYYY[nian]MM[yue]DD[ri] HH:mm:ss" -> "YYYY-MM-DD HH:mm:ss"
         // \u5e74=year \u6708=month \u65e5=day (CJK chars in SGE response)
         const rawTime = (q.delaystr || "").replace(/(\d+)\u5e74(\d+)\u6708(\d+)\u65e5/, "$1-$2-$3");
-        const quoteDate = (rawTime.match(/^\d{4}-\d{2}-\d{2}/) || [null])[0];
+        // Parse the quote timestamp as Shanghai time (UTC+8) to compare against real now.
+        const m = rawTime.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
         let time = rawTime;
         let stale = false;
-        if (lastTradeDate && quoteDate && quoteDate > lastTradeDate) {
-          // Stale/closed: fall back to last trading day's close for both price and time.
+        if (m) {
+          // Build epoch ms for the quote treating its wall-clock as UTC+8.
+          const quoteUtcMs = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) - 8 * 3600 * 1000;
+          const ageMs = Date.now() - quoteUtcMs;
+          // A live quote is at most ~15min delayed; allow generous slack. If the quote is
+          // older than ~4h, the last session has ended (or it's a frozen weekend feed) → stale.
+          const STALE_AFTER_MS = 4 * 3600 * 1000;
+          if (ageMs > STALE_AFTER_MS) {
+            stale = true;
+            // Fall back to the last completed trading day's close.
+            time = (lastTradeDate || rawTime.slice(0, 10)) + " (closed)";
+            if (lastKRow) price = lastKRow[2]; // daily close
+          }
+        } else if (!rawTime) {
           stale = true;
-          time = lastTradeDate + " (closed)";
-          if (todayRow) price = todayRow[2]; // daily close
+          if (lastTradeDate) time = lastTradeDate + " (closed)";
+          if (lastKRow) price = lastKRow[2];
         }
 
         const raise = price != null && preClose != null ? +(price - preClose).toFixed(2) : null;
